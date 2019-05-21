@@ -17,8 +17,8 @@
 #include <string>
 #include <iostream>
 
-#include "xzdma_hw.h"
 #include "xzdma.h"
+
 const unsigned int BUFFERSIZE = 1024;
 
 
@@ -33,7 +33,7 @@ class UserspaceZynqMpDMA{
 
         }
                
-        ptrRegs = mmap(NULL, 2**12, PROT_READ | PROT_WRITE, MAP_SHARED, cdevice_fd, 0);
+        ptrRegs = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, cdevice_fd, 0);
         if (ptrRegs == MAP_FAILED) {
                 std::cerr << "UIO_mmap construction failed" << std::endl;
                 return -2;

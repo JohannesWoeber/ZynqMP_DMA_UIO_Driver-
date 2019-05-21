@@ -141,38 +141,13 @@ extern "C" {
 #endif
 
 /***************************** Include Files *********************************/
-#include <stdint.h>
 
 #include "xzdma_hw.h"
+#include "xil_assert.h"
+#include "xstatus.h"
+//#include "xil_cache.h"
+//#include "bspconfig.h"
 
-
-#define NULL nullptr
-#define u8 uint8_t
-#define u16 uint16_t
-#define u32 uint32_t
-#define u64 uint64_t
-
-#define s8 int8_t
-#define s16 int16_t
-#define s32 int32_t
-#define s64 int64_t
-
-#define Xil_AssertNonvoid(x)
-#define Xil_AssertVoidAlways(x)
-#define Xil_AssertVoid(x)
-
-#define TRUE true
-#define FALSE false
-
-#define XST_SUCCESS 0 
-#define XST_FAILURE -1
-
-#define XIL_COMPONENT_IS_READY 1
-
-#define UINTPTR void*
-#define INTPTR void*
-
-#define Xil_DCacheFlushRange(x,y)
 /************************** Constant Definitions *****************************/
 
 
