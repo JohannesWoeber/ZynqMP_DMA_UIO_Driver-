@@ -57,10 +57,10 @@
 #include "xil_types.h"
 #include "xil_io.h"
 #include "xplatform_info.h"
-#if defined (__aarch64__)
-#include "bspconfig.h"
-#include "xil_smc.h"
-#endif
+//#if defined (__aarch64__)
+//#include "bspconfig.h"
+//#include "xil_smc.h"
+//#endif
 /************************** Constant Definitions *****************************/
 
 /**************************** Type Definitions *******************************/

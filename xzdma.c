@@ -57,6 +57,9 @@
 
 #include "xzdma.h"
 
+#define Xil_DCacheInvalidateRange(x,y)
+#define Xil_DCacheFlushRange(x,y)
+
 /************************** Function Prototypes ******************************/
 
 static void StubCallBack(void *CallBackRef, u32 Mask);
@@ -103,7 +106,7 @@ static void XZDma_GetConfigurations(XZDma *InstancePtr);
 *
 ******************************************************************************/
 s32 XZDma_CfgInitialize(XZDma *InstancePtr, XZDma_Config *CfgPtr,
-			u32 EffectiveAddr)
+			u64 EffectiveAddr)
 {
 
 	/* Verify arguments. */

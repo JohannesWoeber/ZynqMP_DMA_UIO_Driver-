@@ -351,7 +351,7 @@ extern "C" {
 *
 ******************************************************************************/
 #define XZDma_ReadReg(BaseAddress, RegOffset) \
-		XZDma_In32((BaseAddress) + (u32)(RegOffset))
+		XZDma_In32((u64)(BaseAddress) + (u64)(RegOffset))
 
 /*****************************************************************************/
 /**
@@ -369,7 +369,7 @@ extern "C" {
 *
 ******************************************************************************/
 #define XZDma_WriteReg(BaseAddress, RegOffset, Data) \
-		XZDma_Out32(((BaseAddress) + (u32)(RegOffset)), (u32)(Data))
+		XZDma_Out32(((u64)(BaseAddress) + (u64)(RegOffset)), (u32)(Data))
 
 #ifdef __cplusplus
 }

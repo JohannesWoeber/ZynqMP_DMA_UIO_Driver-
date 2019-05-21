@@ -149,51 +149,53 @@ static void outnum( const s32 n, const s32 base, struct params_s *par)
 #if defined (__aarch64__) || defined (__arch64__)
 static void outnum1( const s64 n, const s32 base, params_t *par)
 {
-    s32 negative;
-	s32 i;
-    char8 outbuf[64];
-    const char8 digits[] = "0123456789ABCDEF";
-    u64 num;
-    for(i = 0; i<64; i++) {
-	outbuf[i] = '0';
-    }
-
-    /* Check if number is negative                   */
-    if ((par->unsigned_flag == 0) && (base == 10) && (n < 0L)) {
-        negative = 1;
-		num =(-(n));
-    }
-    else{
-        num = (n);
-        negative = 0;
-    }
-
-    /* Build number (backwards) in outbuf            */
-    i = 0;
-    do {
-		outbuf[i] = digits[(num % base)];
-		i++;
-		num /= base;
-    } while (num > 0);
-
-    if (negative != 0) {
-		outbuf[i] = '-';
-		i++;
-	}
-
-    outbuf[i] = 0;
-    i--;
-
-    /* Move the converted number to the buffer and   */
-    /* add in the padding where needed.              */
-    par->len = (s32)strlen(outbuf);
-    padding( !(par->left_flag), par);
-    while (&outbuf[i] >= outbuf) {
-	outbyte( outbuf[i] );
-		i--;
+//    s32 negative;
+//	s32 i;
+//    char8 outbuf[64];
+//    const char8 digits[] = "0123456789ABCDEF";
+//    u64 num;
+//    for(i = 0; i<64; i++) {
+//	outbuf[i] = '0';
+//    }
+//
+//    /* Check if number is negative                   */
+//    if ((par->unsigned_flag == 0) && (base == 10) && (n < 0L)) {
+//        negative = 1;
+//		num =(-(n));
+//    }
+//    else{
+//        num = (n);
+//        negative = 0;
+//    }
+//
+//    /* Build number (backwards) in outbuf            */
+//    i = 0;
+//    do {
+//		outbuf[i] = digits[(num % base)];
+//		i++;
+//		num /= base;
+//    } while (num > 0);
+//
+//    if (negative != 0) {
+//		outbuf[i] = '-';
+//		i++;
+//	}
+//
+//    outbuf[i] = 0;
+//    i--;
+//
+//    /* Move the converted number to the buffer and   */
+//    /* add in the padding where needed.              */
+//    par->len = (s32)strlen(outbuf);
+//    padding( !(par->left_flag), par);
+//    while (&outbuf[i] >= outbuf) {
+//	outbyte( outbuf[i] );
+//		i--;
+//}
+//    padding( par->left_flag, par);
 }
-    padding( par->left_flag, par);
-}
+
+
 #endif
 /*---------------------------------------------------*/
 /*                                                   */

@@ -46,6 +46,10 @@
 #include "xil_io.h"
 #include "sleep.h"
 
+#define sleep_A9(x)
+#define usleep_A9(x)
+#define sleep_A53(x)
+#define usleep_A53(x)
 /****************************  Constant Definitions  *************************/
 
 

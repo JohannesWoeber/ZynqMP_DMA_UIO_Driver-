@@ -309,7 +309,7 @@ typedef void (*XZDma_ErrorHandler) (void *CallBackRef, u32 ErrorMask);
 */
 typedef struct {
 	u16 DeviceId;		/**< Device Id of ZDMA */
-	u32 BaseAddress;	/**< BaseAddress of ZDMA */
+	u64 BaseAddress;	/**< BaseAddress of ZDMA */
 	u8 DmaType;		/**< Type of DMA */
 	u8 IsCacheCoherent; /**< Describes whether Cache Coherent or not;
                               * Applicable only to A53 in EL1 NS mode */
@@ -683,7 +683,7 @@ typedef struct {
 XZDma_Config *XZDma_LookupConfig(u16 DeviceId);
 
 s32 XZDma_CfgInitialize(XZDma *InstancePtr, XZDma_Config *CfgPtr,
-			u32 EffectiveAddr);
+			u64 EffectiveAddr);
 s32 XZDma_SetMode(XZDma *InstancePtr, u8 IsSgDma, XZDma_Mode Mode);
 u32 XZDma_CreateBDList(XZDma *InstancePtr, XZDma_DscrType TypeOfDscr,
 					UINTPTR Dscr_MemPtr, u32 NoOfBytes);

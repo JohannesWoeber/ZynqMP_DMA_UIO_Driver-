@@ -33,15 +33,65 @@ class UserspaceZynqMpDMA{
 
         }
                
-        ptrRegs = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, cdevice_fd, 0);
-        if (ptrRegs == MAP_FAILED) {
+        ptrRegs = (uintptr_t)mmap(NULL, 16384, PROT_READ | PROT_WRITE, MAP_SHARED, cdevice_fd, 0);
+        if (ptrRegs == (uintptr_t)MAP_FAILED) {
                 std::cerr << "UIO_mmap construction failed" << std::endl;
                 return -2;
         }   
     }
 
     int startSimpleDMATransfer(unsigned long int srcAddr, unsigned long int destAddr, unsigned long int transferLength){
-        XZDma_ReadReg(ptrRegs, XZDMA_CH_STS_OFFSET)
+        
+        unsigned int data = static_cast<unsigned int>(*((uint8_t *) ptrRegs));
+        std::cout << "XZDMA_ERR_CTRL: " << data << std::endl;
+        std::cout << "XZDMA_CH_CTRL0_OFFSET: " << XZDma_ReadReg(ptrRegs,XZDMA_CH_CTRL0_OFFSET) << std::endl;
+
+        *((uint8_t *) ptrRegs + XZDMA_CH_CTRL0_OFFSET) = 1; 
+        XZDma_WriteReg(ptrRegs,XZDMA_CH_CTRL0_OFFSET,1);
+
+        std::cout << "XZDMA_CH_CTRL0_OFFSET: " << XZDma_ReadReg(ptrRegs,XZDMA_CH_CTRL0_OFFSET) << std::endl;
+
+        *((uint8_t *) ptrRegs + XZDMA_CH_CTRL0_OFFSET) = 0; 
+        XZDma_WriteReg(ptrRegs,XZDMA_CH_CTRL0_OFFSET,0); 
+        
+        std::cout << "XZDMA_CH_CTRL0_OFFSET: " << XZDma_ReadReg(ptrRegs,XZDMA_CH_CTRL0_OFFSET) << std::endl;
+
+        XZDma_Config Config =
+	    {
+	    	0,
+	    	ptrRegs,
+	    	1 /* 0 = GDMA, 1 = ADMA */
+	    };
+
+        int Status;
+        XZDma ZDma;		/**<Instance of the ZDMA Device */
+
+
+
+        /*
+	     * Initialize the ZDMA driver so that it's ready to use.
+	     * Look up the configuration in the config table,
+	     * then initialize it.
+	     */
+	
+        std::cout << "Initializing ZDma" << std::endl;
+        Status = XZDma_CfgInitialize(&ZDma, &Config, Config.BaseAddress);
+	    if (Status != XST_SUCCESS) {
+            std::cout << "Initializing ZDma failed" << std::endl;
+	    	return XST_FAILURE;
+	    }
+
+        std::cout << "ZDma Seftest" << std::endl;
+	    /*
+	     * Performs the self-test to check hardware build.
+	     */
+	    Status = XZDma_SelfTest(&ZDma);
+	    if (Status != XST_SUCCESS) {
+            std::cout << "ZDma Seftest failed" << std::endl;
+	    	return XST_FAILURE;
+	    }
+
+        std::cout << "XZDma_ReadReg: " << XZDma_ReadReg(ptrRegs, XZDMA_CH_STS_OFFSET) << std::endl;
     }
 
     ~UserspaceZynqMpDMA(){
@@ -49,7 +99,7 @@ class UserspaceZynqMpDMA{
     }
     private:
         const std::string cdevice;
-        void *ptrRegs;
+        std::uintptr_t ptrRegs;
         int cdevice_fd;
 };
 
@@ -57,7 +107,12 @@ UserspaceZynqMpDMA LpdDmaChan1("/dev/uio0");
 
 
 int requestDmaTransfer(unsigned long int srcAddr, unsigned long int destAddr, unsigned long int transferLength){
-    LpdDmaChan1.mmapRegs();
+    if( LpdDmaChan1.mmapRegs() == 0 ){
+        LpdDmaChan1.startSimpleDMATransfer(srcAddr,destAddr,transferLength);
+    }
+
+
+    
     return 0;
 }
 
