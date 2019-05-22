@@ -26,6 +26,9 @@ class UserspaceZynqMpDMA{
     public:
     UserspaceZynqMpDMA(std::string const& cdevice) : cdevice(cdevice) {}
     int mmapRegs(){
+        int i = getpagesize();
+
+
         cdevice_fd = open(cdevice.c_str(), O_RDWR);
         if (cdevice_fd < 0){
             std::cerr << "opening " << cdevice << " failed " << std::endl;
@@ -33,29 +36,16 @@ class UserspaceZynqMpDMA{
 
         }
                
-        ptrRegs = (uintptr_t)mmap(NULL, 16384, PROT_READ | PROT_WRITE, MAP_SHARED, cdevice_fd, 0);
+        ptrRegs = (uintptr_t)mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, cdevice_fd, 0);
         if (ptrRegs == (uintptr_t)MAP_FAILED) {
                 std::cerr << "UIO_mmap construction failed" << std::endl;
                 return -2;
         }   
+        return 0;
     }
 
     int startSimpleDMATransfer(unsigned long int srcAddr, unsigned long int destAddr, unsigned long int transferLength){
         
-        unsigned int data = static_cast<unsigned int>(*((uint8_t *) ptrRegs));
-        std::cout << "XZDMA_ERR_CTRL: " << data << std::endl;
-        std::cout << "XZDMA_CH_CTRL0_OFFSET: " << XZDma_ReadReg(ptrRegs,XZDMA_CH_CTRL0_OFFSET) << std::endl;
-
-        *((uint8_t *) ptrRegs + XZDMA_CH_CTRL0_OFFSET) = 1; 
-        XZDma_WriteReg(ptrRegs,XZDMA_CH_CTRL0_OFFSET,1);
-
-        std::cout << "XZDMA_CH_CTRL0_OFFSET: " << XZDma_ReadReg(ptrRegs,XZDMA_CH_CTRL0_OFFSET) << std::endl;
-
-        *((uint8_t *) ptrRegs + XZDMA_CH_CTRL0_OFFSET) = 0; 
-        XZDma_WriteReg(ptrRegs,XZDMA_CH_CTRL0_OFFSET,0); 
-        
-        std::cout << "XZDMA_CH_CTRL0_OFFSET: " << XZDma_ReadReg(ptrRegs,XZDMA_CH_CTRL0_OFFSET) << std::endl;
-
         XZDma_Config Config =
 	    {
 	    	0,
@@ -90,8 +80,13 @@ class UserspaceZynqMpDMA{
             std::cout << "ZDma Seftest failed" << std::endl;
 	    	return XST_FAILURE;
 	    }
+        std::cout << "ZDma Seftest succeeded" << std::endl;
 
-        std::cout << "XZDma_ReadReg: " << XZDma_ReadReg(ptrRegs, XZDMA_CH_STS_OFFSET) << std::endl;
+        /* ZDMA has set in simple transfer of Normal mode */
+	    //Status = XZDma_SetMode(&ZDma, FALSE, XZDMA_NORMAL_MODE);
+	    //if (Status != XST_SUCCESS) {
+		//return XST_FAILURE;
+	    //}
     }
 
     ~UserspaceZynqMpDMA(){
