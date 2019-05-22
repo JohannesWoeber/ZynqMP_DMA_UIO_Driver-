@@ -13,9 +13,12 @@
 #include <time.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#include <unistd.h>
 
 #include <string>
 #include <iostream>
+#include <chrono>
+#include <thread>
 
 #include "xzdma.h"
 
@@ -26,9 +29,6 @@ class UserspaceZynqMpDMA{
     public:
     UserspaceZynqMpDMA(std::string const& cdevice) : cdevice(cdevice) {}
     int mmapRegs(){
-        int i = getpagesize();
-
-
         cdevice_fd = open(cdevice.c_str(), O_RDWR);
         if (cdevice_fd < 0){
             std::cerr << "opening " << cdevice << " failed " << std::endl;
@@ -46,11 +46,32 @@ class UserspaceZynqMpDMA{
 
     int startSimpleDMATransfer(unsigned long int srcAddr, unsigned long int destAddr, unsigned long int transferLength){
         
+
+
+        int fd = open("/dev/mem", O_RDWR); /* read and write flags*/
+        if(fd < 0)
+        {
+                printf("Can't open /dev/mem\n");
+                return 1;
+        }
+        void * p  = mmap(0, getpagesize() , PROT_READ | PROT_WRITE, MAP_SHARED, fd, (0xFD1A00B8 & ~(sysconf(_SC_PAGE_SIZE) - 1))); /* read and write flags*/
+        if(p == MAP_FAILED)
+        {
+                printf("Can't mmap ( %s )\n",strerror(errno));
+                close(fd);
+                return 1;
+        }
+        unsigned int FPD_DMA_REF_CTRL = *reinterpret_cast<unsigned int*>(p + (0xFD1A00B8 - (0xFD1A00B8 & ~(sysconf(_SC_PAGE_SIZE) - 1))));
+        FPD_DMA_REF_CTRL |= 0x1000000;
+        *reinterpret_cast<unsigned int*>(p + (0xFD1A00B8 - (0xFD1A00B8 & ~(sysconf(_SC_PAGE_SIZE) - 1)))) = FPD_DMA_REF_CTRL;
+        munmap(p, getpagesize());
+        close(fd);
+
         XZDma_Config Config =
 	    {
 	    	0,
 	    	ptrRegs,
-	    	1 /* 0 = GDMA, 1 = ADMA */
+	    	0 /* 0 = GDMA, 1 = ADMA */
 	    };
 
         int Status;
@@ -83,10 +104,44 @@ class UserspaceZynqMpDMA{
         std::cout << "ZDma Seftest succeeded" << std::endl;
 
         /* ZDMA has set in simple transfer of Normal mode */
-	    //Status = XZDma_SetMode(&ZDma, FALSE, XZDMA_NORMAL_MODE);
-	    //if (Status != XST_SUCCESS) {
-		//return XST_FAILURE;
-	    //}
+	    Status = XZDma_SetMode(&ZDma, FALSE, XZDMA_NORMAL_MODE);
+	    if (Status != XST_SUCCESS) {
+		    return XST_FAILURE;
+	    }
+
+        /* Configuration settings */
+        XZDma_DataConfig Configure; /* Configuration values */
+	    Configure.OverFetch = 1;
+	    Configure.SrcIssue = 0x1F;
+	    Configure.SrcBurstType = XZDMA_INCR_BURST;
+	    Configure.SrcBurstLen = 0xF;
+	    Configure.DstBurstType = XZDMA_INCR_BURST;
+	    Configure.DstBurstLen = 0xF;
+	    Configure.SrcCache = 0x2;
+	    Configure.DstCache = 0x2;
+	    if (/*Config->IsCacheCoherent*/ false) {
+	    	Configure.SrcCache = 0xF;
+	    	Configure.DstCache = 0xF;
+	    }
+	    Configure.SrcQos = 0;
+	    Configure.DstQos = 0;
+
+	    XZDma_SetChDataConfig(&ZDma, &Configure);
+	    /*
+	     * Transfer elements
+	     */
+        XZDma_Transfer Data;
+	    Data.DstAddr = (UINTPTR)destAddr;
+	    Data.DstCoherent = 1;
+	    Data.Pause = 0;
+	    Data.SrcAddr = (UINTPTR)srcAddr;
+	    Data.SrcCoherent = 1;
+	    Data.Size = transferLength; /* Size in bytes */
+
+        std::cout << "starting Transfer" << std::endl;
+	    XZDma_Start(&ZDma, &Data, 1); /* Initiates the data transfer */
+        std::this_thread::sleep_for(std::chrono::seconds(3));    
+        return 0;
     }
 
     ~UserspaceZynqMpDMA(){
@@ -98,7 +153,7 @@ class UserspaceZynqMpDMA{
         int cdevice_fd;
 };
 
-UserspaceZynqMpDMA LpdDmaChan1("/dev/uio0");
+UserspaceZynqMpDMA LpdDmaChan1("/dev/uio1");
 
 
 int requestDmaTransfer(unsigned long int srcAddr, unsigned long int destAddr, unsigned long int transferLength){
