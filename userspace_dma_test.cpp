@@ -25,10 +25,40 @@
 const unsigned int BUFFERSIZE = 1024;
 
 
+static int ActivateFpdDmaClk(){
+        const unsigned int FPD_DMA_REF_CTRL_ADDR = 0xFD1A00B8;
+        const unsigned int CLKACT_MASK = 0x1000000;
+
+        const unsigned int FPD_DMA_REF_CTRL_ADDR_PAGE = (FPD_DMA_REF_CTRL_ADDR & ~(sysconf(_SC_PAGE_SIZE) - 1));
+        const unsigned int FPD_DMA_REF_CTRL_ADDR_PAGE_OFFSET = FPD_DMA_REF_CTRL_ADDR - FPD_DMA_REF_CTRL_ADDR_PAGE;
+
+        int fd = open("/dev/mem", O_RDWR); /* read and write flags*/
+        if(fd < 0)
+        {
+                printf("Can't open /dev/mem\n");
+                return 1;
+        }
+        unsigned int * p  = static_cast<unsigned int *>(mmap(0, getpagesize() , PROT_READ | PROT_WRITE, MAP_SHARED, fd, FPD_DMA_REF_CTRL_ADDR_PAGE)); /* read and write flags*/
+        if(p == MAP_FAILED)
+        {
+                printf("Can't mmap ( %s )\n",strerror(errno));
+                close(fd);
+                return 1;
+        }
+        *(p + FPD_DMA_REF_CTRL_ADDR_PAGE_OFFSET/4) |= 0x1000000;
+        munmap(p, getpagesize());
+        close(fd);
+        return 0;
+}
+
 class UserspaceZynqMpDMA{
     public:
     UserspaceZynqMpDMA(std::string const& cdevice) : cdevice(cdevice) {}
     int mmapRegs(){
+        if( ActivateFpdDmaClk() != 0){
+                return -3;
+        }
+
         cdevice_fd = open(cdevice.c_str(), O_RDWR);
         if (cdevice_fd < 0){
             std::cerr << "opening " << cdevice << " failed " << std::endl;
@@ -45,28 +75,6 @@ class UserspaceZynqMpDMA{
     }
 
     int startSimpleDMATransfer(unsigned long int srcAddr, unsigned long int destAddr, unsigned long int transferLength){
-        
-
-
-        int fd = open("/dev/mem", O_RDWR); /* read and write flags*/
-        if(fd < 0)
-        {
-                printf("Can't open /dev/mem\n");
-                return 1;
-        }
-        void * p  = mmap(0, getpagesize() , PROT_READ | PROT_WRITE, MAP_SHARED, fd, (0xFD1A00B8 & ~(sysconf(_SC_PAGE_SIZE) - 1))); /* read and write flags*/
-        if(p == MAP_FAILED)
-        {
-                printf("Can't mmap ( %s )\n",strerror(errno));
-                close(fd);
-                return 1;
-        }
-        unsigned int FPD_DMA_REF_CTRL = *reinterpret_cast<unsigned int*>(p + (0xFD1A00B8 - (0xFD1A00B8 & ~(sysconf(_SC_PAGE_SIZE) - 1))));
-        FPD_DMA_REF_CTRL |= 0x1000000;
-        *reinterpret_cast<unsigned int*>(p + (0xFD1A00B8 - (0xFD1A00B8 & ~(sysconf(_SC_PAGE_SIZE) - 1)))) = FPD_DMA_REF_CTRL;
-        munmap(p, getpagesize());
-        close(fd);
-
         XZDma_Config Config =
 	    {
 	    	0,
