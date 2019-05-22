@@ -14,18 +14,20 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <unistd.h>
+#include <poll.h>
 
 #include <string>
 #include <iostream>
 #include <chrono>
 #include <thread>
+#include <vector>
 
 #include "xzdma.h"
 
 const unsigned int BUFFERSIZE = 1024;
 
-
-static int ActivateFpdDmaClk(){
+static int ActivateFpdDmaClk()
+{
         const unsigned int FPD_DMA_REF_CTRL_ADDR = 0xFD1A00B8;
         const unsigned int CLKACT_MASK = 0x1000000;
 
@@ -33,129 +35,186 @@ static int ActivateFpdDmaClk(){
         const unsigned int FPD_DMA_REF_CTRL_ADDR_PAGE_OFFSET = FPD_DMA_REF_CTRL_ADDR - FPD_DMA_REF_CTRL_ADDR_PAGE;
 
         int fd = open("/dev/mem", O_RDWR); /* read and write flags*/
-        if(fd < 0)
+        if (fd < 0)
         {
                 printf("Can't open /dev/mem\n");
                 return 1;
         }
-        unsigned int * p  = static_cast<unsigned int *>(mmap(0, getpagesize() , PROT_READ | PROT_WRITE, MAP_SHARED, fd, FPD_DMA_REF_CTRL_ADDR_PAGE)); /* read and write flags*/
-        if(p == MAP_FAILED)
+        unsigned int *p = static_cast<unsigned int *>(mmap(0, getpagesize(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, FPD_DMA_REF_CTRL_ADDR_PAGE)); /* read and write flags*/
+        if (p == MAP_FAILED)
         {
-                printf("Can't mmap ( %s )\n",strerror(errno));
+                printf("Can't mmap ( %s )\n", strerror(errno));
                 close(fd);
                 return 1;
         }
-        *(p + FPD_DMA_REF_CTRL_ADDR_PAGE_OFFSET/4) |= 0x1000000;
+        *(p + FPD_DMA_REF_CTRL_ADDR_PAGE_OFFSET / 4) |= 0x1000000;
         munmap(p, getpagesize());
         close(fd);
         return 0;
 }
 
-class UserspaceZynqMpDMA{
-    public:
-    UserspaceZynqMpDMA(std::string const& cdevice) : cdevice(cdevice) {}
-    int mmapRegs(){
-        if( ActivateFpdDmaClk() != 0){
-                return -3;
+class UserspaceZynqMpDMA
+{
+public:
+        UserspaceZynqMpDMA(std::string const &cdevice) : cdevice(cdevice) {}
+        int mmapRegs()
+        {
+                if (ActivateFpdDmaClk() != 0)
+                {
+                        return -3;
+                }
+
+                cdevice_fd = open(cdevice.c_str(), O_RDWR);
+                if (cdevice_fd < 0)
+                {
+                        std::cerr << "opening " << cdevice << " failed " << std::endl;
+                        return -1;
+                }
+
+                ptrRegs = (uintptr_t)mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, cdevice_fd, 0);
+                if (ptrRegs == (uintptr_t)MAP_FAILED)
+                {
+                        std::cerr << "UIO_mmap construction failed" << std::endl;
+                        return -2;
+                }
+                return 0;
         }
+        typedef struct
+        {
+                unsigned long int srcAddr;
+                unsigned long int destAddr;
+                unsigned long int transferLength;
+        } transferRequest;
 
-        cdevice_fd = open(cdevice.c_str(), O_RDWR);
-        if (cdevice_fd < 0){
-            std::cerr << "opening " << cdevice << " failed " << std::endl;
-            return -1;
+        int startSimpleDMATransfer(transferRequest const &request)
+        {
+                XZDma_Config Config =
+                    {
+                        0,
+                        ptrRegs,
+                        0 /* 0 = GDMA, 1 = ADMA */
+                    };
 
-        }
-               
-        ptrRegs = (uintptr_t)mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, cdevice_fd, 0);
-        if (ptrRegs == (uintptr_t)MAP_FAILED) {
-                std::cerr << "UIO_mmap construction failed" << std::endl;
-                return -2;
-        }   
-        return 0;
-    }
+                int Status;
+                XZDma ZDma; /**<Instance of the ZDMA Device */
 
-    int startSimpleDMATransfer(unsigned long int srcAddr, unsigned long int destAddr, unsigned long int transferLength){
-        XZDma_Config Config =
-	    {
-	    	0,
-	    	ptrRegs,
-	    	0 /* 0 = GDMA, 1 = ADMA */
-	    };
-
-        int Status;
-        XZDma ZDma;		/**<Instance of the ZDMA Device */
-
-
-
-        /*
+                /*
 	     * Initialize the ZDMA driver so that it's ready to use.
 	     * Look up the configuration in the config table,
 	     * then initialize it.
 	     */
-	
-        std::cout << "Initializing ZDma" << std::endl;
-        Status = XZDma_CfgInitialize(&ZDma, &Config, Config.BaseAddress);
-	    if (Status != XST_SUCCESS) {
-            std::cout << "Initializing ZDma failed" << std::endl;
-	    	return XST_FAILURE;
-	    }
 
-        std::cout << "ZDma Seftest" << std::endl;
-	    /*
+                std::cout << "Initializing ZDma" << std::endl;
+                Status = XZDma_CfgInitialize(&ZDma, &Config, Config.BaseAddress);
+                if (Status != XST_SUCCESS)
+                {
+                        std::cout << "Initializing ZDma failed" << std::endl;
+                        return XST_FAILURE;
+                }
+
+                std::cout << "ZDma Seftest" << std::endl;
+                /*
 	     * Performs the self-test to check hardware build.
 	     */
-	    Status = XZDma_SelfTest(&ZDma);
-	    if (Status != XST_SUCCESS) {
-            std::cout << "ZDma Seftest failed" << std::endl;
-	    	return XST_FAILURE;
-	    }
-        std::cout << "ZDma Seftest succeeded" << std::endl;
+                Status = XZDma_SelfTest(&ZDma);
+                if (Status != XST_SUCCESS)
+                {
+                        std::cout << "ZDma Seftest failed" << std::endl;
+                        return XST_FAILURE;
+                }
+                std::cout << "ZDma Seftest succeeded" << std::endl;
 
-        /* ZDMA has set in simple transfer of Normal mode */
-	    Status = XZDma_SetMode(&ZDma, FALSE, XZDMA_NORMAL_MODE);
-	    if (Status != XST_SUCCESS) {
-		    return XST_FAILURE;
-	    }
+                /* ZDMA has set in simple transfer of Normal mode */
+                Status = XZDma_SetMode(&ZDma, FALSE, XZDMA_NORMAL_MODE);
+                if (Status != XST_SUCCESS)
+                {
+                        return XST_FAILURE;
+                }
 
-        /* Configuration settings */
-        XZDma_DataConfig Configure; /* Configuration values */
-	    Configure.OverFetch = 1;
-	    Configure.SrcIssue = 0x1F;
-	    Configure.SrcBurstType = XZDMA_INCR_BURST;
-	    Configure.SrcBurstLen = 0xF;
-	    Configure.DstBurstType = XZDMA_INCR_BURST;
-	    Configure.DstBurstLen = 0xF;
-	    Configure.SrcCache = 0x2;
-	    Configure.DstCache = 0x2;
-	    if (/*Config->IsCacheCoherent*/ false) {
-	    	Configure.SrcCache = 0xF;
-	    	Configure.DstCache = 0xF;
-	    }
-	    Configure.SrcQos = 0;
-	    Configure.DstQos = 0;
+                /* Enable required interrupts */
+	        XZDma_EnableIntr(&ZDma, (XZDMA_IXR_DMA_DONE_MASK));
 
-	    XZDma_SetChDataConfig(&ZDma, &Configure);
-	    /*
+                /* Configuration settings */
+                XZDma_DataConfig Configure; /* Configuration values */
+                Configure.OverFetch = 1;
+                Configure.SrcIssue = 0x1F;
+                Configure.SrcBurstType = XZDMA_INCR_BURST;
+                Configure.SrcBurstLen = 0xF;
+                Configure.DstBurstType = XZDMA_INCR_BURST;
+                Configure.DstBurstLen = 0xF;
+                Configure.SrcCache = 0x2;
+                Configure.DstCache = 0x2;
+                if (/*Config->IsCacheCoherent*/ false)
+                {
+                        Configure.SrcCache = 0xF;
+                        Configure.DstCache = 0xF;
+                }
+                Configure.SrcQos = 0;
+                Configure.DstQos = 0;
+
+                XZDma_SetChDataConfig(&ZDma, &Configure);
+                /*
 	     * Transfer elements
 	     */
-        XZDma_Transfer Data;
-	    Data.DstAddr = (UINTPTR)destAddr;
-	    Data.DstCoherent = 1;
-	    Data.Pause = 0;
-	    Data.SrcAddr = (UINTPTR)srcAddr;
-	    Data.SrcCoherent = 1;
-	    Data.Size = transferLength; /* Size in bytes */
+                XZDma_Transfer Data;
+                Data.DstAddr = (UINTPTR)request.destAddr;
+                Data.DstCoherent = 1;
+                Data.Pause = 0;
+                Data.SrcAddr = (UINTPTR)request.srcAddr;
+                Data.SrcCoherent = 1;
+                Data.Size = request.transferLength; /* Size in bytes */
 
-        std::cout << "starting Transfer" << std::endl;
-	    XZDma_Start(&ZDma, &Data, 1); /* Initiates the data transfer */
-        std::this_thread::sleep_for(std::chrono::seconds(3));    
-        return 0;
-    }
+                std::cout << "starting Transfer" << std::endl;
+                XZDma_Start(&ZDma, &Data, 1); /* Initiates the data transfer */
 
-    ~UserspaceZynqMpDMA(){
-        close(cdevice_fd);
-    }
-    private:
+                uint32_t intInfo;
+                ssize_t readSize;
+
+                // Acknowldege interrupt
+                intInfo = 1;
+                if (write(cdevice_fd, &intInfo, sizeof(intInfo)) < 0)
+                {
+                        fprintf(stderr, "Cannot acknowledge uio device interrupt: %s\n",
+                                strerror(errno));
+                        return -1;
+                }
+                // Wait for interrupt
+                struct pollfd fds = {
+                        .fd = cdevice_fd,
+                        .events = POLLIN,
+                };
+
+
+                int ret = poll(&fds, 1, 3000);
+                if (ret >= 1) {
+                        readSize = read(cdevice_fd, &intInfo, sizeof(intInfo));
+                        if (readSize == (ssize_t)sizeof(intInfo)) {
+                                /* Do something in response to the interrupt. */
+                                printf("Interrupt #%u!\n", intInfo);
+                        }
+                } else if(ret == 0 ){
+                        std::cerr << "waiting for interrupt timed out" << std::endl;
+                }
+                else {
+                        std::cerr << "poll error" << std::endl;
+                        return -1;
+                }
+
+
+                return 0;
+        }
+
+        int startSGListTransfer(std::vector<transferRequest> const &requests)
+        {
+                return 0;
+        }
+
+        ~UserspaceZynqMpDMA()
+        {
+                close(cdevice_fd);
+        }
+
+private:
         const std::string cdevice;
         std::uintptr_t ptrRegs;
         int cdevice_fd;
@@ -163,39 +222,40 @@ class UserspaceZynqMpDMA{
 
 UserspaceZynqMpDMA LpdDmaChan1("/dev/uio1");
 
+int requestDmaTransfer(unsigned long int srcAddr, unsigned long int destAddr, unsigned long int transferLength)
+{
+        if (LpdDmaChan1.mmapRegs() == 0)
+        {
+                LpdDmaChan1.startSimpleDMATransfer({.srcAddr = srcAddr, .destAddr = destAddr, .transferLength = transferLength});
+        }
 
-int requestDmaTransfer(unsigned long int srcAddr, unsigned long int destAddr, unsigned long int transferLength){
-    if( LpdDmaChan1.mmapRegs() == 0 ){
-        LpdDmaChan1.startSimpleDMATransfer(srcAddr,destAddr,transferLength);
-    }
-
-
-    
-    return 0;
+        return 0;
 }
-
 
 int main()
 {
         int fd;
         printf("**********************************\n");
-        printf("*******Userspace DMA TEST*******\n");
+        printf("*******Userspace DMA TEST*********\n");
 
         // write values into udmabuf0
         printf("write values into udmabuf0\n");
 
-        if ((fd  = open("/dev/udmabuf0", O_RDWR | O_SYNC)) != -1) {
-          void* buf = mmap(NULL, BUFFERSIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-          for( size_t i = 0; i < BUFFERSIZE; ++i){
-                reinterpret_cast<uint8_t*>(buf)[i] = i%256;
-          }
-          close(fd);
+        if ((fd = open("/dev/udmabuf0", O_RDWR | O_SYNC)) != -1)
+        {
+                void *buf = mmap(NULL, BUFFERSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+                for (size_t i = 0; i < BUFFERSIZE; ++i)
+                {
+                        reinterpret_cast<uint8_t *>(buf)[i] = i % 256;
+                }
+                close(fd);
         }
-        
+
         // request transfer from buf0 to buf1 from dmaengine-proxy driver
         printf("request transfer from buf0 to buf1 from dmaengine-proxy driver \n");
         unsigned int udmabuf0_phys_addr = 0;
-        if ((fd  = open("/sys/class/udmabuf/udmabuf0/phys_addr", O_RDONLY)) != -1) {
+        if ((fd = open("/sys/class/udmabuf/udmabuf0/phys_addr", O_RDONLY)) != -1)
+        {
                 char attr[1024];
                 read(fd, attr, 1024);
                 sscanf(attr, "%x", &udmabuf0_phys_addr);
@@ -204,7 +264,8 @@ int main()
         printf("udmabuf0 phys addr = %x \n", udmabuf0_phys_addr);
 
         unsigned int udmabuf1_phys_addr = 1;
-        if ((fd  = open("/sys/class/udmabuf/udmabuf1/phys_addr", O_RDONLY)) != -1) {
+        if ((fd = open("/sys/class/udmabuf/udmabuf1/phys_addr", O_RDONLY)) != -1)
+        {
                 char attr[1024];
                 read(fd, attr, 1024);
                 sscanf(attr, "%x", &udmabuf1_phys_addr);
@@ -217,13 +278,13 @@ int main()
         // read values from udmabuf1
         printf("read values from udmabuf1\n");
 
-        if ((fd  = open("/dev/udmabuf1", O_RDWR | O_SYNC)) != -1) {
-          void* buf = mmap(NULL, BUFFERSIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
-          for( size_t i = 0; i < BUFFERSIZE; ++i){
-                printf("%d ",reinterpret_cast<uint8_t*>(buf)[i]);
-          }
-          close(fd);
+        if ((fd = open("/dev/udmabuf1", O_RDWR | O_SYNC)) != -1)
+        {
+                void *buf = mmap(NULL, BUFFERSIZE, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+                for (size_t i = 0; i < BUFFERSIZE; ++i)
+                {
+                        printf("%d ", reinterpret_cast<uint8_t *>(buf)[i]);
+                }
+                close(fd);
         }
-
-
 }
