@@ -1,6 +1,7 @@
 #include <string>
 #include <iostream>
 #include <chrono>
+#include <thread>
 
 #include "../lib/zynqmp_userspace_dma_driver.h"
 
@@ -51,11 +52,14 @@ int main()
         cout << "Transfer succeeded in " << (end_time - start_time)/std::chrono::microseconds(1) << " us "<< endl;
 
         // read values from udmabuf1
-        printf("Reading from last %d Bytes of the Buffer \n", driver->getBufferSize()/2);
+        printf("Checking last %d Bytes of the Buffer \n", driver->getBufferSize()/2);
 
         for (size_t i = 0; i < driver->getBufferSize()/2; ++i)
         {
-                printf("%d ", reinterpret_cast<uint8_t *>(driver->getBuffer())[i+driver->getBufferSize()/2]);
+                if(reinterpret_cast<uint8_t *>(driver->getBuffer())[i+driver->getBufferSize()/2] != i % 256 ){
+                        cout << "Error found at entry # " << i << endl;
+                        return -1;
+                }
         }
-
+        cout << "Data ok" << endl;
 }
