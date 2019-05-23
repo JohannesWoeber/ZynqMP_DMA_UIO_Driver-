@@ -1,5 +1,7 @@
 #include <string>
 #include <iostream>
+#include <thread>
+#include <chrono>
 
 #include "../lib/zynqmp_userspace_dma_driver.h"
 
@@ -36,6 +38,8 @@ int main()
                 .transferLength = driver->getBufferSize()/2
         };
         driver->configureDMA( {request} );
+
+        std::this_thread::sleep_for(std::chrono::seconds(3));
 
         // read values from udmabuf1
         printf("Reading from last %d Bytes of the Buffer \n", driver->getBufferSize()/2);
