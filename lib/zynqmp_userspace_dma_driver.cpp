@@ -101,6 +101,11 @@ unsigned int DmaDriverImpl::getBufferSize()
 
 int DmaDriverImpl::configureDMA(std::vector<transferRequest> requests)
 {
+   if(requests.size() > 32){
+      cout << "max. Nbr. of transfer Requests = 32" << endl;
+      return -10;
+   }
+
    if (ActivateFpdDmaClk() != 0)
    {
       cout << "Could not activate Clock" << endl;
@@ -142,11 +147,14 @@ int DmaDriverImpl::configureDMA(std::vector<transferRequest> requests)
    std::cout << "ZDma Seftest succeeded" << std::endl;
 
    /* ZDMA has set in simple transfer of Normal mode */
-   Status = XZDma_SetMode(&ZDma, FALSE, XZDMA_NORMAL_MODE);
+   Status = XZDma_SetMode(&ZDma, TRUE, XZDMA_NORMAL_MODE);
    if (Status != XST_SUCCESS)
    {
       return XST_FAILURE;
    }
+
+	/* Allocated memory starting address should be 64 bit aligned */
+	XZDma_CreateBDList(&ZDma, XZDMA_LINEAR, (UINTPTR)cfgBuf.getAddr(), (UINTPTR)cfgBuf.physAddr() , 4096);
 
    /* Configuration settings */
    XZDma_DataConfig Configure; /* Configuration values */
@@ -170,16 +178,19 @@ int DmaDriverImpl::configureDMA(std::vector<transferRequest> requests)
    /*
 	     * Transfer elements
 	     */
-   XZDma_Transfer Data;
-   Data.DstAddr = (UINTPTR)requests[0].destAddr;
-   Data.DstCoherent = 1;
-   Data.Pause = 0;
-   Data.SrcAddr = (UINTPTR)requests[0].srcAddr;
-   Data.SrcCoherent = 1;
-   Data.Size = requests[0].transferLength; /* Size in bytes */
+   XZDma_Transfer Data[32];
+   for( int i = 0; i < requests.size(); ++i){
+      Data[i].DstAddr = (UINTPTR)requests[i].destAddr;
+      Data[i].DstCoherent = 1;
+      Data[i].Pause = 0;
+      Data[i].SrcAddr = (UINTPTR)requests[i].srcAddr;
+      Data[i].SrcCoherent = 1;
+      Data[i].Size = requests[i].transferLength; /* Size in bytes */
+   }
+  
 
    std::cout << "starting Transfer" << std::endl;
-   XZDma_Start(&ZDma, &Data, 1); /* Initiates the data transfer */
+   XZDma_Start(&ZDma, Data, requests.size()); /* Initiates the data transfer */
 
    return 0;
 }

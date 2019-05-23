@@ -56,7 +56,7 @@ public:
                         std::cerr << "Could not open " << ("/sys/class/uio/" + deviceName + "/map0/addr") << std::endl;
                         return -2;
                 }
-                std::cout << "[ZynqMP Userspace DMA Driver] " << deviceName << " PhysAddr: " << physAddr << std::endl;
+                std::cout << "[ZynqMP Userspace DMA Driver] "  << deviceName << " PhysAddr: " << std::hex << physAddr << std::dec << std::endl;
 
                 fd = open(("/dev/" + device).c_str(), O_RDWR | O_SYNC);
                 if (fd != -1)

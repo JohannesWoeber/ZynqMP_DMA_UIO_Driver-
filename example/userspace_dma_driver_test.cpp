@@ -32,17 +32,21 @@ int main()
                 reinterpret_cast<uint8_t *>(driver->getBuffer())[i] = i % 256;
         }
 
-        DmaDriver::transferRequest request = { 
+        DmaDriver::transferRequest request1 = { 
                 .srcAddr = driver->getBufferPhysAddr(),
                 .destAddr = driver->getBufferPhysAddr() + driver->getBufferSize()/2,
-                .transferLength = driver->getBufferSize()/2
+                .transferLength = driver->getBufferSize()/4
         };
-        driver->configureDMA( {request} );
+        DmaDriver::transferRequest request2 = { 
+                .srcAddr = driver->getBufferPhysAddr() + driver->getBufferSize()/4,
+                .destAddr = driver->getBufferPhysAddr() + driver->getBufferSize()/2 + driver->getBufferSize()/4,
+                .transferLength = driver->getBufferSize()/4
+        };
+        driver->configureDMA( {request1, request2} );
         auto start_time = std::chrono::high_resolution_clock::now();
 
 
         driver->startDMA();
-
         while(driver->checkDMAStatus() == DmaDriver::XZDMA_BUSY) {}
         auto end_time = std::chrono::high_resolution_clock::now();
 

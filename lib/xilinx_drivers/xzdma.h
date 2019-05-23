@@ -207,7 +207,10 @@ typedef enum {
  */
 typedef struct {
 	void *SrcDscrPtr;	/**< Source Descriptor pointer */
+	void *PhysSrcDscrPtr;	/**< Physical Source Descriptor pointer */
 	void *DstDscrPtr;	/**< Destination Descriptor pointer */
+	void *PhysDstDscrPtr;	/**< Physical Source Descriptor pointer */
+
 	u32 DscrCount;		/**< Count of descriptors available */
 	XZDma_DscrType DscrType;/**< Type of descriptor either Linear or
 				  *  Linked list type */
@@ -686,7 +689,7 @@ s32 XZDma_CfgInitialize(XZDma *InstancePtr, XZDma_Config *CfgPtr,
 			u64 EffectiveAddr);
 s32 XZDma_SetMode(XZDma *InstancePtr, u8 IsSgDma, XZDma_Mode Mode);
 u32 XZDma_CreateBDList(XZDma *InstancePtr, XZDma_DscrType TypeOfDscr,
-					UINTPTR Dscr_MemPtr, u32 NoOfBytes);
+					UINTPTR Dscr_MemPtr, UINTPTR Descr_PhysMemPtr, u32 NoOfBytes);
 s32 XZDma_SetChDataConfig(XZDma *InstancePtr, XZDma_DataConfig *Configure);
 void XZDma_GetChDataConfig(XZDma *InstancePtr, XZDma_DataConfig *Configure);
 s32 XZDma_SetChDscrConfig(XZDma *InstancePtr, XZDma_DscrConfig *Configure);

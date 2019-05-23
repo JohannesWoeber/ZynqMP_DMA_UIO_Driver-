@@ -256,7 +256,7 @@ End:
 *
 ******************************************************************************/
 u32 XZDma_CreateBDList(XZDma *InstancePtr, XZDma_DscrType TypeOfDscr,
-					UINTPTR Dscr_MemPtr, u32 NoOfBytes)
+					UINTPTR Dscr_MemPtr, UINTPTR Descr_PhysMemPtr, u32 NoOfBytes)
 {
 	u32 Size;
 
@@ -278,10 +278,14 @@ u32 XZDma_CreateBDList(XZDma *InstancePtr, XZDma_DscrType TypeOfDscr,
 	InstancePtr->Descriptor.DscrCount =
 						(NoOfBytes >> 1) / Size;
 	InstancePtr->Descriptor.SrcDscrPtr = (void *)Dscr_MemPtr;
+	InstancePtr->Descriptor.PhysSrcDscrPtr = (void *)Descr_PhysMemPtr;
+
 	InstancePtr->Descriptor.DstDscrPtr =
 			(void *)(Dscr_MemPtr +
 			(UINTPTR)(Size * InstancePtr->Descriptor.DscrCount));
-
+	InstancePtr->Descriptor.PhysDstDscrPtr =
+			(void *)(Descr_PhysMemPtr +
+			(UINTPTR)(Size * InstancePtr->Descriptor.DscrCount));
 	if (!InstancePtr->Config.IsCacheCoherent)
 	Xil_DCacheInvalidateRange((INTPTR)Dscr_MemPtr, NoOfBytes);
 
@@ -965,19 +969,19 @@ static void XZDma_ScatterGather(XZDma *InstancePtr, XZDma_Transfer *Data,
 
 	XZDma_WriteReg(InstancePtr->Config.BaseAddress,
 		XZDMA_CH_SRC_START_LSB_OFFSET,
-		((UINTPTR)(InstancePtr->Descriptor.SrcDscrPtr) &
+		((UINTPTR)(InstancePtr->Descriptor.PhysSrcDscrPtr) &
 					XZDMA_WORD0_LSB_MASK));
 	XZDma_WriteReg(InstancePtr->Config.BaseAddress,
 		XZDMA_CH_SRC_START_MSB_OFFSET,
-		(((u64)(UINTPTR)(InstancePtr->Descriptor.SrcDscrPtr) >>
+		(((u64)(UINTPTR)(InstancePtr->Descriptor.PhysSrcDscrPtr) >>
 			XZDMA_WORD1_MSB_SHIFT) & XZDMA_WORD1_MSB_MASK));
 	XZDma_WriteReg(InstancePtr->Config.BaseAddress,
 		XZDMA_CH_DST_START_LSB_OFFSET,
-		((UINTPTR)(InstancePtr->Descriptor.DstDscrPtr) &
+		((UINTPTR)(InstancePtr->Descriptor.PhysDstDscrPtr) &
 					XZDMA_WORD0_LSB_MASK));
 	XZDma_WriteReg(InstancePtr->Config.BaseAddress,
 		XZDMA_CH_DST_START_MSB_OFFSET,
-		(((u64)(UINTPTR)(InstancePtr->Descriptor.DstDscrPtr) >>
+		(((u64)(UINTPTR)(InstancePtr->Descriptor.PhysDstDscrPtr) >>
 			XZDMA_WORD1_MSB_SHIFT) & XZDMA_WORD1_MSB_MASK));
 }
 

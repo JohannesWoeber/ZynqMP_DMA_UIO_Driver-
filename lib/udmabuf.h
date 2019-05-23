@@ -59,7 +59,7 @@ public:
                         std::cerr << "Could not open " << ("/sys/class/udmabuf/" + deviceName + "/phys_addr") << std::endl;
                         return -2;
                 }
-                std::cout << "[ZynqMP Userspace DMA Driver] " << deviceName << " PhysAddr: " << udmabuf_phys_addr << std::endl;
+                std::cout << "[ZynqMP Userspace DMA Driver] " << deviceName << " PhysAddr: "  << std::hex << udmabuf_phys_addr << std::dec  << std::endl;
 
                 fd = open(("/dev/" + device).c_str(), O_RDWR | O_SYNC);
                 if (fd != -1)
