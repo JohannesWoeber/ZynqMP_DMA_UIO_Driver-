@@ -19,11 +19,11 @@ public:
    virtual int configureDMA(std::vector<transferRequest> requests) = 0;
    virtual int startDMA() = 0;
 
-   typedef enum {
-      XZDMA_UNAVAILABLE,   /**< ZDMA is unavailable (mapping failed?) */
-      XZDMA_IDLE,		      /**< ZDMA is in Idle state */
-	   XZDMA_PAUSE,		   /**< Paused state */
-	   XZDMA_BUSY,		      /**< Busy state */
+   typedef enum : unsigned int {
+      XZDMA_IDLE = 0,		      /**< ZDMA is in Idle state */
+	   XZDMA_PAUSE = 1,		   /**< Paused state */
+	   XZDMA_BUSY = 2,		      /**< Busy state */
+      XZDMA_ERROR = 3,		      /**< Busy state */
    } DMAStatus;
    virtual DMAStatus checkDMAStatus() = 0;
 };

@@ -75,7 +75,6 @@ static void XZDma_LinkedListMode(XZDma *InstancePtr, XZDma_Transfer *Data,
 	XZDma_LlDscr *SrcDscrPtr,XZDma_LlDscr *DstDscrPtr, u8 IsLast);
 static void XZDma_ConfigLinkedList(XZDma_LlDscr *DscrPtr, u64 Addr, u32 Size,
 					u32 CtrlValue, u64 NextDscrAddr);
-static void XZDma_Enable(XZDma *InstancePtr);
 static void XZDma_GetConfigurations(XZDma *InstancePtr);
 
 /************************** Function Definitions *****************************/
@@ -833,7 +832,7 @@ s32 XZDma_Start(XZDma *InstancePtr, XZDma_Transfer *Data, u32 Num)
 			Status = XST_SUCCESS;
 		}
 
-		XZDma_Enable(InstancePtr);
+		//XZDma_Enable(InstancePtr);
 	}
 
 	return Status;
@@ -1193,7 +1192,7 @@ static void XZDma_ConfigLinkedList(XZDma_LlDscr *DscrPtr, u64 Addr, u32 Size,
 *
 ******************************************************************************/
 
-static void XZDma_Enable(XZDma *InstancePtr)
+void XZDma_Enable(XZDma *InstancePtr)
 {
 	/* Verify arguments */
 	Xil_AssertVoid(InstancePtr != NULL);

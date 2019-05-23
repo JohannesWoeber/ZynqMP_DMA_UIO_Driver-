@@ -1,6 +1,5 @@
 #include <string>
 #include <iostream>
-#include <thread>
 #include <chrono>
 
 #include "../lib/zynqmp_userspace_dma_driver.h"
@@ -38,8 +37,18 @@ int main()
                 .transferLength = driver->getBufferSize()/2
         };
         driver->configureDMA( {request} );
+        auto start_time = std::chrono::high_resolution_clock::now();
 
-        std::this_thread::sleep_for(std::chrono::seconds(3));
+
+        driver->startDMA();
+
+        while(driver->checkDMAStatus() == DmaDriver::XZDMA_BUSY) {}
+        auto end_time = std::chrono::high_resolution_clock::now();
+
+        if( driver->checkDMAStatus() != DmaDriver::XZDMA_IDLE){
+                cout << "Transfer failed" << endl;
+        }
+        cout << "Transfer succeeded in " << (end_time - start_time)/std::chrono::microseconds(1) << " us "<< endl;
 
         // read values from udmabuf1
         printf("Reading from last %d Bytes of the Buffer \n", driver->getBufferSize()/2);

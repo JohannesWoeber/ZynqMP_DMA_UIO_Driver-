@@ -692,6 +692,7 @@ void XZDma_GetChDataConfig(XZDma *InstancePtr, XZDma_DataConfig *Configure);
 s32 XZDma_SetChDscrConfig(XZDma *InstancePtr, XZDma_DscrConfig *Configure);
 void XZDma_GetChDscrConfig(XZDma *InstancePtr, XZDma_DscrConfig *Configure);
 s32 XZDma_Start(XZDma *InstancePtr, XZDma_Transfer *Data, u32 Num);
+void XZDma_Enable(XZDma *InstancePtr);
 void XZDma_WOData(XZDma *InstancePtr, u32 *Buffer);
 void XZDma_Resume(XZDma *InstancePtr);
 void XZDma_Reset(XZDma *InstancePtr);

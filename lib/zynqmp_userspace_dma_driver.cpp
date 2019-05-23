@@ -56,6 +56,7 @@ private:
    udmabuf dataBuf;
    udmabuf cfgBuf;
    uio uio_dma;
+   XZDma ZDma; /**<Instance of the ZDMA Device */
 };
 
 int DmaDriverImpl::map(string const &uioDmaDriverDevice,
@@ -113,7 +114,6 @@ int DmaDriverImpl::configureDMA(std::vector<transferRequest> requests)
       };
 
    int Status;
-   XZDma ZDma; /**<Instance of the ZDMA Device */
 
    /*
 	     * Initialize the ZDMA driver so that it's ready to use.
@@ -186,12 +186,13 @@ int DmaDriverImpl::configureDMA(std::vector<transferRequest> requests)
 
 int DmaDriverImpl::startDMA()
 {
+   XZDma_Enable(&ZDma);
    return 0;
 }
 
 DmaDriver::DMAStatus DmaDriverImpl::checkDMAStatus()
 {
-   return DmaDriver::XZDMA_UNAVAILABLE;
+   return static_cast<DmaDriver::DMAStatus>(XZDma_ReadReg(ZDma.Config.BaseAddress,(XZDMA_CH_STS_OFFSET)) & (XZDMA_STS_ALL_MASK));
 }
 
 unique_ptr<DmaDriver> getDmaDriver(string const &uioDmaDriverDevice,
