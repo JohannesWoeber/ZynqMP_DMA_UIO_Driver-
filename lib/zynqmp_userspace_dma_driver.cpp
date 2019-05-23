@@ -1,3 +1,14 @@
+/**
+ * @file zynqmp_userspace_dma_driver.cpp
+ * @author jwoeber@riegl.com
+ * @brief zynqmp dma userspace driver
+ * @version 0.1
+ * @date 2019-05-23
+ * 
+ * @copyright Copyright (c) 2019
+ * 
+ */
+
 #include "udmabuf.h"
 #include "uio.h"
 
@@ -7,6 +18,11 @@
 
 using namespace std;
 
+/**
+ * @brief activate the clock for the FPD DMAs
+ * 
+ * @return 0 if success 
+ */
 static int ActivateFpdDmaClk()
 {
    const unsigned int FPD_DMA_REF_CTRL_ADDR = 0xFD1A00B8;
@@ -19,14 +35,14 @@ static int ActivateFpdDmaClk()
    if (fd < 0)
    {
       printf("Can't open /dev/mem\n");
-      return 1;
+      return -1;
    }
    unsigned int *p = static_cast<unsigned int *>(mmap(0, getpagesize(), PROT_READ | PROT_WRITE, MAP_SHARED, fd, FPD_DMA_REF_CTRL_ADDR_PAGE)); /* read and write flags*/
    if (p == MAP_FAILED)
    {
       printf("Can't mmap ( %s )\n", strerror(errno));
       close(fd);
-      return 1;
+      return -2;
    }
    *(p + FPD_DMA_REF_CTRL_ADDR_PAGE_OFFSET / 4) |= 0x1000000;
    munmap(p, getpagesize());
@@ -59,6 +75,14 @@ private:
    XZDma ZDma; /**<Instance of the ZDMA Device */
 };
 
+/**
+ * @brief open and map the drivers 
+ * 
+ * @param uioDmaDriverDevice name of the uio dma device (f.e. "uio0") must be uio_pdrv_genirq driver device
+ * @param udmaDataBufDevice name of dma buffer device (f.e. "udmabuf0") must be udmabuf driver device 
+ * @param udmaCfgBufDevice name of dma cfg buffer device (f.e. "udmabuf1") must be udmabuf driver device 
+ * @return int 
+ */
 int DmaDriverImpl::map(string const &uioDmaDriverDevice,
                        string const &udmaDataBufDevice,
                        string const &udmaCfgBufDevice)
@@ -176,8 +200,8 @@ int DmaDriverImpl::configureDMA(std::vector<transferRequest> requests)
 
    XZDma_SetChDataConfig(&ZDma, &Configure);
    /*
-	     * Transfer elements
-	     */
+	   * Transfer elements
+	   */
    XZDma_Transfer Data[32];
    for( int i = 0; i < requests.size(); ++i){
       Data[i].DstAddr = (UINTPTR)requests[i].destAddr;
