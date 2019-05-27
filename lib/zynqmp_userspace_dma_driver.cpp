@@ -4,9 +4,9 @@
  * @brief zynqmp dma userspace driver
  * @version 0.1
  * @date 2019-05-23
- * 
+ *
  * @copyright Copyright (c) 2019
- * 
+ *
  */
 
 #include "udmabuf.h"
@@ -20,8 +20,8 @@ using namespace std;
 
 /**
  * @brief activate the clock for the FPD DMAs
- * 
- * @return 0 if success 
+ *
+ * @return 0 if success
  */
 static int ActivateFpdDmaClk()
 {
@@ -76,12 +76,12 @@ private:
 };
 
 /**
- * @brief open and map the drivers 
- * 
+ * @brief open and map the drivers
+ *
  * @param uioDmaDriverDevice name of the uio dma device (f.e. "uio0") must be uio_pdrv_genirq driver device
- * @param udmaDataBufDevice name of dma buffer device (f.e. "udmabuf0") must be udmabuf driver device 
- * @param udmaCfgBufDevice name of dma cfg buffer device (f.e. "udmabuf1") must be udmabuf driver device 
- * @return int 
+ * @param udmaDataBufDevice name of dma buffer device (f.e. "udmabuf0") must be udmabuf driver device
+ * @param udmaCfgBufDevice name of dma cfg buffer device (f.e. "udmabuf1") must be udmabuf driver device
+ * @return int
  */
 int DmaDriverImpl::map(string const &uioDmaDriverDevice,
                        string const &udmaDataBufDevice,
@@ -211,7 +211,7 @@ int DmaDriverImpl::configureDMA(std::vector<transferRequest> requests)
       Data[i].SrcCoherent = 1;
       Data[i].Size = requests[i].transferLength; /* Size in bytes */
    }
-  
+
 
    std::cout << "starting Transfer" << std::endl;
    XZDma_Start(&ZDma, Data, requests.size()); /* Initiates the data transfer */
@@ -234,8 +234,8 @@ unique_ptr<DmaDriver> getDmaDriver(string const &uioDmaDriverDevice,
                                    string const &udmaDataBufDevice,
                                    string const &udmaCfgBufDevice)
 {
-   unique_ptr<DmaDriverImpl> driver(new DmaDriverImpl());
-   if (driver->map(uioDmaDriverDevice, udmaDataBufDevice, udmaCfgBufDevice) != 0)
+   unique_ptr<DmaDriver> driver(new DmaDriverImpl());
+   if (static_cast<DmaDriverImpl *>(driver.get())->map(uioDmaDriverDevice, udmaDataBufDevice, udmaCfgBufDevice) != 0)
    {
       return nullptr;
    }
