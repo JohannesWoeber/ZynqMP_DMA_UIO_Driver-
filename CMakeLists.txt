@@ -7,6 +7,8 @@ set(tools $ENV{CONFIG_TOOLCHAIN})
 set(CMAKE_C_COMPILER $ENV{CONFIG_TOOLCHAIN}gcc)
 set(CMAKE_CXX_COMPILER $ENV{CONFIG_TOOLCHAIN}g++)
 
+set (CMAKE_CXX_STANDARD 11)
+
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
@@ -21,5 +23,3 @@ target_include_directories(zynqmp_userspace_dma_driver_lib PUBLIC lib/xilinx_dri
 
 add_executable(userspace_dma_test example/userspace_dma_driver_test.cpp)
 target_link_libraries( userspace_dma_test zynqmp_userspace_dma_driver_lib )
-
-
