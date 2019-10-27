@@ -1,5 +1,5 @@
 # ZynqMP DMA Userspace Driver
-This userspace driver allows the configuration of a ZynqMp DMA. This is done by configuring the DMA with a source 
+This userspace driver allows the configuration of a [ZynqMp DMA](https://www.xilinx.com/support/documentation/user_guides/ug1085-zynq-ultrascale-trm.pdf#page=520). This is done by configuring the DMA with a source 
 and destination address (physical) and a transfer length andstarting the DMA. Up to 32 requests can be configured
 and started at once ( via the sg functionality of the DMA ).Furthermore a DMA Buffer can be requested from this 
 library via the getBuffer() method. The physical address ofthat buffer is available via the getBufferPhysAddr()
